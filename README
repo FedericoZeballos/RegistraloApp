@@ -1,3 +1,262 @@
-completar
+# 🚀 RegistraloApp - Guía Rápida
+
+## ⚡ Instalación y Ejecución Rápida (Windows)
+
+### 1. Prerrequisitos
+```powershell
+# Instalar PostgreSQL (postgresql.org)
+# Durante instalación: usuario 'postgres', password 'admin', puerto 5432
+
+# Instalar Memurai (Redis para Windows)
+# Descargar desde memurai.com - Developer Edition (gratis)
+```
+
+### 2. Configurar Base de Datos
+```powershell
+# Crear base de datos
+"C:\Program Files\PostgreSQL\17\bin\createdb.exe" -h localhost -p 5432 -U postgres registralo_db
+
+# Verificar Redis
+"C:\Program Files\Memurai\memurai-cli.exe" ping  # Debe responder: PONG
+```
+
+### 3. Configurar Proyecto
+```powershell
+# Clonar y activar entorno
+git clone <tu-repo>
+cd RegistraloApp
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Crear archivo .env en la raíz:
+echo "DB_USER=postgres
+DB_PASSWORD=admin
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=registralo_db
+REDIS_URL=redis://localhost:6379/0
+ADMIN_PASSWORD=admin" > .env
+
+# Crear usuario admin
+python create_admin.py
+```
+
+### 4. Ejecutar Aplicación
+```powershell
+uvicorn app.main:app --reload
+```
+
+### 5. 🎯 Acceder a la App
+- **API Docs**: http://127.0.0.1:8000/docs
+- **Admin Panel**: http://127.0.0.1:8000/admin (usuario: `admin`, password: `admin`)
+- **API Root**: http://127.0.0.1:8000/
+
+---
+
+## 📝 Documentación Detallada
+
+PARA LEVANTAR EL SERVIDOR:
+uvicorn app.main:app --reload
+
+----------------------------------------------------------------------------------------------------------------------------
+
+👉 Abrí en navegador:
+http://127.0.0.1:8000/docs
+y tendrás la UI interactiva de la API.
+
+----------------------------------------------------------------------------------------------------------------------------
+
+📌 Con esto ya tenés:
+    -- FastAPI corriendo.
+    -- PostgreSQL conectado vía SQLAlchemy.
+    -- Endpoints para crear y listar compras.
+    -- ORM listo para escalar y hacer consultas complejas más adelante.
+
+----------------------------------------------------------------------------------------------------------------------------
+
+RegistraloApp/
+│── alembic/               # migraciones automáticas
+│── app/
+│   ├── core/              # configuración
+│   │   └── database.py
+│   ├── models/            # modelos ORM
+│   │   └── compra.py
+│   ├── schemas/           # Pydantic schemas
+│   │   └── compra.py
+│   ├── crud/              # operaciones CRUD
+│   │   └── compra.py
+│   ├── routers/           # rutas de la API
+│   │   └── compra.py
+│   └── main.py            # punto de entrada
+└── alembic.ini
 
 
+----------------------------------------------------------------------------------------------------------------------------
+
+
+COMANDOS CORRIDOS PARA CREAR EL PROYECTO:
+    PARA INICIAR PROYECTO:
+        python -m venv venv
+        .\venv\Scripts\Activate.ps1
+        pip install fastapi uvicorn sqlalchemy psycopg2-binary alembic pydantic
+        python -m pip install --upgrade pip
+
+    CREAR ESTRUCTURA DE CARPETAS:
+        mkdir app
+        mkdir app\routers
+        mkdir app\models
+        mkdir app\schemas
+        mkdir app\crud
+        mkdir app\core
+
+
+    PARA INICIAR EL PROYECTO:
+        venv\Scripts\activate                  //Asegurate de estar posicionado.
+        python create_admin.py                //Primero corre el script para crear un usuario.
+        uvicorn app.main:app --reload         // Levanta el proyecto.
+        
+----------------------------------------------------------------------------------------------------------------------------
+
+
+Para una entidad Compra, podrías tener:
+
+    app/models/compra.py → el modelo ORM (SQLAlchemy).
+
+    app/schemas/compra.py → el esquema Pydantic (validación de entrada/salida).
+
+    app/crud/compra.py → funciones CRUD (create, read, update, delete).
+
+    app/routers/compra.py → las rutas de la API relacionadas con compras.
+
+📌 Esto hace que el proyecto escale mejor cuando tengas más entidades (Ej: Usuario, Categoría, etc.).
+
+
+----------------------------------------------------------------------------------------------------------------------------
+
+## 🚀 CONFIGURACIÓN SIN DOCKER (Windows)
+
+### Problema Original
+La app estaba configurada para Docker, pero necesitábamos correrla localmente en Windows sin virtualización habilitada.
+
+### ✅ Solución Completa
+
+#### 1. Instalar PostgreSQL (Windows nativo)
+```powershell
+# Descargar e instalar PostgreSQL desde postgresql.org
+# Durante instalación: usuario 'postgres', password 'admin', puerto 5432
+
+# Crear la base de datos
+"C:\Program Files\PostgreSQL\17\bin\createdb.exe" -h localhost -p 5432 -U postgres registralo_db
+
+# Verificar servicio activo
+Get-Service -Name "postgresql*"
+```
+
+#### 2. Instalar Redis (Memurai para Windows)
+```powershell
+# Instalar Memurai Developer Edition (gratis)
+# Probar conexión:
+"C:\Program Files\Memurai\memurai-cli.exe" ping
+# Debe responder: PONG
+```
+
+#### 3. Archivo .env (raíz del proyecto)
+```bash
+DB_USER=postgres
+DB_PASSWORD=admin
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=registralo_db
+
+REDIS_URL=redis://localhost:6379/0
+ADMIN_PASSWORD=admin
+```
+
+#### 4. Dependencias (requirements.txt ya listo)
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+#### 5. Migración a Tortoise ORM
+**CAMBIO CRÍTICO**: Convertimos toda la app de SQLAlchemy a **Tortoise ORM** porque fastapi-admin solo funciona con Tortoise.
+
+- ❌ Eliminamos: `app/models/compra.py` (SQLAlchemy)
+- ❌ Eliminamos: `app/crud/compra.py` (CRUD SQLAlchemy)  
+- ✅ Usamos: `app/models/compra_tortoise.py` (modelo único)
+- ✅ Actualizamos: `app/routers/compra.py` con métodos Tortoise
+
+#### 6. Configuración FastAPI Admin
+**PROBLEMA**: fastapi-admin necesita setup específico para funcionar.
+
+**Soluciones aplicadas**:
+
+**A) Orden de inicialización correcto** (`app/main.py`):
+```python
+@app.on_event("startup")
+async def on_startup():
+    # PRIMERO: Inicializar Tortoise
+    await Tortoise.init(
+        db_url=db_url,
+        modules={"models": ["app.models.admin_user", "app.models.compra_tortoise"]},
+    )
+    await Tortoise.generate_schemas()
+    
+    # SEGUNDO: Inicializar admin (cuando Tortoise ya está listo)
+    await init_admin(app)
+```
+
+**B) Nombre del modelo compatible** (`app/models/compra_tortoise.py`):
+```python
+class compras(Model):  # nombre en minúsculas = URL /admin/compras/list
+    class Meta:
+        table = "compras"
+```
+
+**C) Incluir router de recursos** (`app/admin.py`):
+```python
+# Crear admin_app y incluir router de recursos
+admin_app = FastAPIAdmin()
+
+# CRÍTICO: Incluir router de recursos manualmente
+from fastapi_admin.routes import router as admin_router
+admin_app.include_router(admin_router)
+```
+
+**D) Hash de contraseñas**: Usar bcrypt (no argon2) para compatibilidad.
+
+#### 7. Crear usuario admin
+```powershell
+python create_admin.py
+# Output: "Contraseña del usuario admin actualizada."
+```
+
+#### 8. Levantar la aplicación
+```powershell
+uvicorn app.main:app --reload
+```
+
+### 🎯 URLs de la Aplicación
+- **API Docs**: http://127.0.0.1:8000/docs
+- **API Root**: http://127.0.0.1:8000/
+- **Admin Panel**: http://127.0.0.1:8000/admin (usuario: `admin`, password: `admin`)
+- **Lista Compras**: http://127.0.0.1:8000/admin/compras/list
+
+### 🐛 Problemas Resueltos
+1. **"Invalid salt"**: Conflicto argon2 vs bcrypt → Usar bcrypt nativo
+2. **"carga infinita"**: Orden de inicialización → Tortoise antes que admin
+3. **404 en admin**: Router de recursos faltante → Incluir manualmente
+4. **Modelos no encontrados**: Nombre incompatible → clase `compras` minúsculas
+5. **Dos ORMs**: SQLAlchemy + Tortoise → Solo Tortoise
+
+### 📊 Estado Final
+✅ PostgreSQL local (4 compras en tabla)  
+✅ Redis local (Memurai)  
+✅ FastAPI + Tortoise ORM unificado  
+✅ Admin panel funcional con CRUD  
+✅ API endpoints operativos  
+✅ Sin dependencias de Docker  
+
+----------------------------------------------------------------------------------------------------------------------------
